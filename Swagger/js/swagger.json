@@ -1,0 +1,229 @@
+{
+  "openapi":"3.0.3",
+  "info": {
+      "description":"Documentation DocMindAi",
+      "version":"1.0.0",
+      "title": "Api Demo"
+  },
+  "servers":[
+    {
+      "url": "http://localhost:8000"
+    }
+  ],
+  "tags":[
+    {
+      "name": "Generalites",
+      "description":"APIs d'ordre generale"
+    },
+    {
+      "name": "Specifiques",
+      "description":"Requetes specifiques"
+    }
+  ],
+  "paths": {
+    "/initialize":{
+      "post": {
+        "tags": [
+          "Generalites"
+        ],
+        "summary": "Fournir un document au modele et lui poser une question d'entree afin d'initier une session",
+        "operationId": "postinitialize",
+        "requestBody": {
+          "description": "Document du contexte, demarrage de la session et premiere question",
+          "required":true,
+          "content": {
+            "application/json":{
+              "schema" : {
+                "$ref":"#/components/schemas/initializeQuery"
+              }
+            }
+          }
+
+
+        },
+        "responses":{
+          "200": {
+            "description": "Renvoi un element json",
+            "content": {
+              "application/json":{
+                "schema":{
+                  "$ref":"#/components/schemas/Reponses"
+                }
+              }
+            }
+          },
+          "500": {
+                "description": "Erreur du serveur",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "example": "Internal Server Error"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+          "422": {
+          "description": "Erreur du dans la requete envoye",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "type": "string",
+                    "example": "Unprocessable Entity"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+
+        }
+      }
+    },
+    "/query":{
+      "post": {
+        "tags": [
+          "Generalites"
+        ],
+        "summary": "Poser une question au modele une fois le document charge et la discussion entammee",
+        "operationId": "postquery",
+        "requestBody": {
+          "description": "question a poser et session de la discussion",
+          "required":true,
+          "content": {
+            "application/json":{
+              "schema" : {
+                "$ref":"#/components/schemas/DiscussionQuery"
+              }
+            }
+          }
+
+
+        },
+        "responses":{
+          "200": {
+            "description": "Renvoi un element json",
+            "content": {
+              "application/json":{
+                "schema":{
+                  "$ref":"#/components/schemas/Reponses"
+                }
+              }
+            }
+          },
+          "500": {
+                "description": "Erreur du serveur",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "example": "Internal Server Error"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+          "422": {
+          "description": "Erreur du dans la requete envoye",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "type": "string",
+                    "example": "Unprocessable Entity"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas":{
+      "Reponses":{
+        "type" : "object",
+        "properties": {
+            "response": {
+                "type":"string"
+            },
+            "session_id": {
+                "type":"string"
+            },
+            "time_response": {
+                "type": "string",
+                 "format": "date-time"
+            }
+      },
+        "example":
+          {
+            "response": "Le document présente une proposition de solution pour le hackathon \"Digital ID for Africa\" intitulée \"Afri-ID Hub : Unified Digital Identity for Efficient Public Services\". L'équipe 49Tech, composée de cinq membres de l'Ecole Polytechnique de Thiès, propose une plateforme de identité numérique unifiée et sécurisée pour faciliter l'accès aux services publics en Afrique.\n\nLe problème identifié est l'absence d'un système d'identité unifié et sécurisé, ce qui entraîne des difficultés pour les citoyens pour accéder aux services publics, tels que les documents civils, les programmes de santé, d'éducation et de services financiers. La solution proposée, Afri-ID Hub, vise à créer une identité numérique unique liée à des données biométriques, stockée dans une base de données nationale ou régionale sécurisée.\n\nLes fonctionnalités clés de la plateforme incluent :\n\n* La création d'une identité numérique\n* Un cadre d'interopérabilité pour faciliter l'utilisation de l'identité numérique à travers les frontières\n* L'accès à plusieurs services, tels que les documents civils, les documents administratifs, les déclarations de taxes, les programmes sociaux\n* Une technologie inclusive pour les smartphones et les téléphones basiques\n* Un portefeuille intégré pour les paiements et les bénéfices gouvernementaux\n* Une sécurité basée sur la blockchain pour garantir la transparence, la traçabilité et la prévention de la fraude\n\nLes étapes de mise en œuvre incluent une phase pilote dans des pays sélectionnés, suivie d'une expansion à d'autres pays.\n\nGENERATE_DOCUMENT: Résumé du document de proposition de solution pour le hackathon \"Digital ID for Africa\" \n\nSi vous souhaitez visualiser les données, veuillez me le faire savoir et je serai ravi de générer une visualisation pour vous. Par exemple, nous pourrions créer un graphique pour illustrer les fonctionnalités de la plateforme Afri-ID Hub. generate_visualization: graphique des fonctionnalités de la plateforme Afri-ID Hub.",
+            "session_id": "session123",
+            "time_response": "2025-02-09 12:02:55.027838"
+        }
+
+    },
+    "ArrayOfReponses":{
+      "type":"array",
+      "items": {
+        "$ref": "#/components/schemas/Reponses"
+      }
+    },
+    "DiscussionQuery":{
+        "type" : "object",
+        "properties": {
+            "session_id": {
+                "type":"string"
+            },
+            "question": {
+                "type":"string"
+            }
+      },
+        "example":
+          {
+            "session_id": "session123",
+            "question": "quel est le type de ce document"
+        }
+    },
+    "initializeQuery":{
+        "type" : "object",
+        "properties": {
+            "session_id": {
+                "type":"string"
+            },
+            "file_path": {
+                "type":"string"
+            },
+            "question": {
+                "type":"string"
+            }
+      },
+        "example":
+        {
+          "session_id": "session123",
+          "file_path": "DigitalID.pdf",
+          "question": "quel est le type de ce document"
+      }
+    }
+  }
+  }
+}
