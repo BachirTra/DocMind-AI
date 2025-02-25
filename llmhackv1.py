@@ -15,12 +15,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_ollama import ChatOllama
 from langchain.globals import set_llm_cache
 from langchain_community.cache import SQLiteCache
+
+from langchain_ollama.llms import OllamaLLM
+import httpx
+
 from datetime import datetime
 import uvicorn
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+ollama_base_url = "http://localhost:11434"
 
 # FastAPI initialization
 app = FastAPI()
@@ -34,6 +40,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+class OllamaConnectionError(Exception):
+    pass
 
 class CustomMemory(BaseMemory, BaseModel):
 
@@ -54,14 +62,14 @@ class CustomMemory(BaseMemory, BaseModel):
 
     ))
 
-
+    
 
     @property
 
     def memory_variables(self) -> List[str]:
 
         return ["chat_history", "document_context", "anonymized_path"]
-
+    
 
     def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
 
@@ -73,7 +81,7 @@ class CustomMemory(BaseMemory, BaseModel):
 
         }
 
-
+    
 
     def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, str]) -> None:
 
@@ -85,7 +93,7 @@ class CustomMemory(BaseMemory, BaseModel):
 
             self.chat_memory.add_ai_message(outputs["output"])
 
-
+    
 
     def clear(self) -> None:
         self.chat_memory.clear()
@@ -99,12 +107,28 @@ class CustomMemory(BaseMemory, BaseModel):
 load_dotenv()
 memory = CustomMemory()
 doc_processor = DocumentProcessor()
-llm = ChatGroq(
+""" llm = ChatGroq(
     groq_api_key=os.getenv('GROQ_API_KEY'),
     model_name='llama-3.3-70b-versatile',
     temperature=0.3,
     max_tokens=5000,  # Reduced from 4000 to 2000
-)
+) """
+
+# Initialisation du modèle Ollama
+def initialize_llm():
+    try:
+        return ChatOllama(
+            base_url=ollama_base_url,
+            model="llama2:latest",
+            temperature=0.3,
+            max_tokens=5000,
+            timeout=30.0  # Increased timeout
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize Ollama LLM: {str(e)}")
+        raise OllamaConnectionError(f"Failed to connect to Ollama server: {str(e)}")
+
+llm = initialize_llm()
 
 # Optimized system prompt
 system_prompt = """Expert document analyzer. Tasks:
@@ -147,7 +171,7 @@ Key instruction patterns to recognize:
 ALWAYS maintain context of both original and anonymized documents if they exist.
 ALWAYS maintain context of documents and generated files.
 
-TOUJOURS inclure generate_visualization dans la reponse si la generation d'un graphe est demande
+TOUJOURS inclure generate_visualization dans la reponse si la generation d'un graphe est demande 
 Ne JAMAIS dire les fonctions que tu as appele
 Context of the document: {document_context}
 """
@@ -161,23 +185,23 @@ def process_document(file_path: str) -> str:
     """Process and chunk document for interaction."""
     logger.info(f"Processing document: {file_path}")
     result = doc_processor.process_document(file_path)
-
+    
     if "error" in result:
         logger.error(f"Error processing document: {result['error']}")
         return result["error"]
-
+    
     memory.document_context = result["text"]
     memory.current_file_path = file_path
-
+    
     logger.info(f"Document loaded. Characters: {len(result['text'])}")
     return "Document loaded successfully. Ready for questions."
 
-def create_visualization(plot_type: str, x_column: str, y_column: Optional[str] = None,
+def create_visualization(plot_type: str, x_column: str, y_column: Optional[str] = None, 
                        title: str = "") -> Dict[str, str]:
     """Create visualization from current document."""
     if not memory.current_file_path:
         return {"error": "No document loaded"}
-
+    
     try:
         result = doc_processor.generate_plot(plot_type, x_column, y_column, title)
         return {
@@ -223,10 +247,10 @@ def initialize_session(request: FirstQueryRequest):
 @app.post("/query")
 def query_model(request: QueryRequest):
     context = memory.load_memory_variables({"input": request.question})
-
+    
     # Process the query and check for different operations
     question_lower = request.question.lower()
-
+    
     # Check for document generation request
     doc_generation_keywords = [
         "genere", "générer", "create", "créer", "save", "sauvegarder",
@@ -238,10 +262,10 @@ def query_model(request: QueryRequest):
         "docx": ["word", "docx", "document word", "doc"],
         "txt": ["text", "txt", "texte"]
     }
-
+    
     # Detect if this is a document generation request
     is_doc_request = any(keyword in question_lower for keyword in doc_generation_keywords)
-
+    
     if is_doc_request:
         # Determine the format
         requested_format = "pdf"  # default format
@@ -249,59 +273,59 @@ def query_model(request: QueryRequest):
             if any(keyword in question_lower for keyword in keywords):
                 requested_format = format_type
                 break
-
+        
         # Generate a timestamp-based filename if not specified
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_filename = f"generated_doc_{timestamp}"
-
+        
         # Prepare the system message to include document generation intent
         system_message = SystemMessage(content=f"""Please analyze the following request for document generation:
 1. Identify the content that needs to be generated
 2. Format it appropriately
 3. Include 'GENERATE_DOCUMENT:' followed by the content in your response if a document should be generated
 Original context: {context["document_context"]}""")
-
+        
         messages = [system_message, HumanMessage(content=request.question)]
         response = llm.invoke(messages)
-
+        
         # Check if response includes document generation marker
         if "GENERATE_DOCUMENT:" in response.content:
             content_parts = response.content.split("GENERATE_DOCUMENT:", 1)
             regular_response = content_parts[0].strip()
             doc_content = content_parts[1].strip()
-
+            
             # Generate the document
             output_dir = "generated_documents"
             os.makedirs(output_dir, exist_ok=True)
             output_path = os.path.join(output_dir, f"{output_filename}.{requested_format}")
-
+            
             result = doc_processor.generate_document(
                 doc_content,
                 requested_format,
                 output_path
             )
-
+            
             if "error" in result:
                 return ResponseData(
                     response=f"Error generating document: {result['error']}",
                     session_id=request.session_id,
                     time_response=str(datetime.now())
                 )
-
+            
             # Combine regular response with document generation confirmation
             final_response = f"{regular_response}\n\nI've generated a {requested_format.upper()} document and saved it at: {output_path}"
-
+            
             memory.save_context(
                 {"input": request.question},
                 {"output": final_response}
             )
-
+            
             return ResponseData(
                 response=final_response,
                 session_id=request.session_id,
                 time_response=str(datetime.now())
             )
-
+    
     # Handle anonymization request
     elif any(keyword in question_lower for keyword in ["anonymize", "hide sensitive", "remove personal", "confidential", "anonymiser", "masquer les informations sensibles", "supprimer les données personnelles", "confidentiel", "anonym"]):
         try:
@@ -311,18 +335,18 @@ Original context: {context["document_context"]}""")
                 context["document_context"] += f"\n[Document has been anonymized. Anonymized version available at: {memory.anonymized_path}]"
         except Exception as e:
             logger.error(f"Anonymization failed: {e}")
-
+    
     # Regular query processing
     response = llm.invoke(prompt.format(
         input=request.question,
         document_context=context["document_context"]
     ))
-
+    
     memory.save_context(
         {"input": request.question},
         {"output": response.content}
     )
-
+    
     return ResponseData(
         response=response.content,
         session_id=request.session_id,
@@ -331,5 +355,5 @@ Original context: {context["document_context"]}""")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
+    
+    
