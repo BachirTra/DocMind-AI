@@ -109,13 +109,7 @@ cp .env.example .env
 
 To run this project, you will need to add the following environment variables to your .env file
 
-`TESSERACT_CMD`
-
-`EMBEDDING_MODEL`
-
-`INDEX_NAME`
-
-
+`TESSERACT_CMD (eg:C:\Program Files\Tesseract-OCR\tesseract.exe)`
 
 
 ## Run Locally
