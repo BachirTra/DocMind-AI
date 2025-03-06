@@ -93,6 +93,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
+**Install Ollama following https://ollama.com/ guide and run a model**
+
 **Set up environment variables**
 ```bash
 cp .env.example .env
