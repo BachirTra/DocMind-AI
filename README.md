@@ -69,7 +69,7 @@ DocMind AI is built on a modern tech stack:
 **Privacy Tools** : Custom anonymization pipeline using SpaCy NER and regex patterns
 
 
-## Getting Started
+# Getting Started
 
 **Prerequisites**
 
@@ -77,6 +77,7 @@ DocMind AI is built on a modern tech stack:
 - Tesseract OCR installed on your system
 - Required Python packages (see requirements.txt)
 - poppler-23.11.0 installed  on your system
+
 ## Installation
 
 **Clone the repository**
@@ -105,18 +106,32 @@ cp .env.example .env
 
 
     
-## Environment Variables
+### Environment Variables
 
 To run this project, you will need to add the following environment variables to your .env file
 
 `TESSERACT_CMD (eg:C:\Program Files\Tesseract-OCR\tesseract.exe)`
 
 
-## Run Locally
+### Run Locally
 Go to the project directory
 ```bash
 python llmhackv1.py
 ```
+
+## 🚀 Installation via Docker
+
+You can execute the app directly from docker without installing manually dependencies.
+
+### 1️⃣ **Construct the docker image**
+```bash
+docker build -t docmind-ai .
+```
+### 2️⃣ **Launch container**
+```bash
+docker run -p 8000:8000 --name docmind docmind-ai
+```
+
 The API will be available at http://localhost:8000
 
 
